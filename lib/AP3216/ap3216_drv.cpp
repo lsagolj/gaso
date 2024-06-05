@@ -12,7 +12,7 @@ int read_als(I2C *i2c, uint16_t *dest)
     int ret, atmp;
 
     char als_regs[] = {0x0D, 0x0C};
-    char als_data[3];
+    char als_data[2];
 
     ret = ap3216_init(i2c);
     if (ret)

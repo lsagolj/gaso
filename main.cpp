@@ -3,9 +3,18 @@
 #include "ap3216_drv.h"
 #include "regulator.h"
 
+InterruptIn button(PC_13); 
+
 DigitalOut usr_led(D13);
 Thread err_thrd;
+Timer debounce;
+
 volatile bool err = false;
+volatile bool active = false;
+
+bool jedan = false;
+bool dva = false;
+bool button_pressed = false; 
 
 void err_led()
 {
@@ -27,6 +36,24 @@ void err_led()
     }
 }
 
+void tgl_on_off()
+{
+   if (!button_pressed) {
+        active = !active;  // Toggle LED if button is pressed and debounce time has passed
+        button_pressed = true;  // Set button pressed flag
+        debounce.reset(); // Reset debounce timer
+        debounce.start(); // Start debounce timer
+    }
+}
+
+void debounce_cbf()
+{
+    if (debounce.read_ms() >= 50) {
+        button_pressed = false;  // Reset button pressed flag after debounce time
+        debounce.stop();   // Stop debounce timer
+    }
+}
+
 int main()
 {
     int ret;
@@ -43,6 +70,12 @@ int main()
     ap3216_init(&left);
     ap3216_init(&right);
 
+    
+    debounce.start();
+    //button.fall([&debounce]() { tgl_on_off(debounce);}); //Lambda funkcija
+    button.fall(&tgl_on_off);
+    button.rise(&debounce_cbf);
+
     while (true) {
         /*ret = read_als(&left, &lt_val);
         if (ret)
@@ -57,13 +90,10 @@ int main()
 
         ThisThread::sleep_for(500);*/
 
-        ThisThread::sleep_for(2000);
-
-        err = true;
-
-        ThisThread::sleep_for(3000);
-        err = false;
-
+        if (active) {
+            printf("gas\n");
+        }
+        ThisThread::sleep_for(5);
     }
 
     return 0;

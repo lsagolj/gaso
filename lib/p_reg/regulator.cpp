@@ -46,33 +46,43 @@ void regulator_step()
    *  Constant: '<Root>/Constant'
    *  Sum: '<Root>/Sum2'
    */
-  if (0.2 - rtb_Sum1 > 1.0) {
+  //if (0.2 - rtb_Sum1 > 1.0) {
     /* Outport: '<Root>/Lijevi motor' */
-    regulator_Y.Lijevimotor = 1.0;
-  } else if (0.2 - rtb_Sum1 < 0.0) {
+    //regulator_Y.Lijevimotor = 0.3;
+  //} else if (0.2 - rtb_Sum1 < 0.0) {
     /* Outport: '<Root>/Lijevi motor' */
-    regulator_Y.Lijevimotor = 0.0;
-  } else {
+   // regulator_Y.Lijevimotor = 0.0;
+  //} else {
     /* Outport: '<Root>/Lijevi motor' */
-    regulator_Y.Lijevimotor = 0.2 - rtb_Sum1;
-  }
-
+   //regulator_Y.Lijevimotor = 0.2 /*- rtb_Sum1*/;
+  //}
+    if (regulator_U.Desnisenzor > (regulator_U.LIjevisenzor * 1.1)) {
+        regulator_Y.Lijevimotor = 0.3;
+        regulator_Y.Desnimotor = 0.1;
+    } else if (regulator_U.LIjevisenzor > (regulator_U.Desnisenzor * 1.1)) {
+        regulator_Y.Desnimotor = 0.3;
+        regulator_Y.Lijevimotor = 0.1;
+    } 
+    else{
+        regulator_Y.Lijevimotor = 0.2;
+        regulator_Y.Desnimotor = 0.2;
+    }
   /* End of Saturate: '<Root>/Saturation' */
 
   /* Saturate: '<Root>/Saturation1' incorporates:
    *  Constant: '<Root>/Constant'
    *  Sum: '<Root>/Sum1'
    */
-  if (rtb_Sum1 + 0.2 > 1.0) {
+  //if (rtb_Sum1 + 0.2 > 1.0) {
     /* Outport: '<Root>/Desni motor' */
-    regulator_Y.Desnimotor = 1.0;
-  } else if (rtb_Sum1 + 0.2 < 0.0) {
+    //regulator_Y.Desnimotor = 0.3;
+  //} else if (rtb_Sum1 + 0.2 < 0.0) {
     /* Outport: '<Root>/Desni motor' */
-    regulator_Y.Desnimotor = 0.0;
-  } else {
+   //regulator_Y.Desnimotor = 0.0;
+ //} else {
     /* Outport: '<Root>/Desni motor' */
-    regulator_Y.Desnimotor = rtb_Sum1 + 0.2;
-  }
+   // regulator_Y.Desnimotor = /*rtb_Sum1 +*/ 0.2;
+  //}
 
   /* End of Saturate: '<Root>/Saturation1' */
 }

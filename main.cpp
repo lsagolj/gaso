@@ -1,99 +1,64 @@
-#include "EventQueue.h"
-#include "ThisThread.h"
 #include "ap3216_drv.h"
+#include "button_debounce.h"
 #include "regulator.h"
+#include "mode.h"
+#include "motor_control.h"
+#include "button_debounce.h"
+#include "error_handling.h"
 
-InterruptIn button(PC_13); 
+#define RUN_TIME_S 30
 
-DigitalOut usr_led(D13);
 Thread err_thrd;
-Timer debounce;
-
-volatile bool err = false;
-volatile bool active = false;
-
-bool jedan = false;
-bool dva = false;
-bool button_pressed = false; 
-
-void err_led()
-{
-    Timer timer;
-
-    while (true) {
-        if (err) {
-            timer.start();
-
-            while (timer.read_ms() < 1000) {
-                usr_led = !usr_led;
-                ThisThread::sleep_for(50);
-            }
-            timer.stop();
-            timer.reset();
-            err = false;
-        } else
-            usr_led = 1;
-    }
-}
-
-void tgl_on_off()
-{
-   if (!button_pressed) {
-        active = !active;  // Toggle LED if button is pressed and debounce time has passed
-        button_pressed = true;  // Set button pressed flag
-        debounce.reset(); // Reset debounce timer
-        debounce.start(); // Start debounce timer
-    }
-}
-
-void debounce_cbf()
-{
-    if (debounce.read_ms() >= 50) {
-        button_pressed = false;  // Reset button pressed flag after debounce time
-        debounce.stop();   // Stop debounce timer
-    }
-}
 
 int main()
 {
     int ret;
     uint16_t lt_val, rt_val;
+    uint8_t mode;
 
     err_thrd.start(err_led);
+    button_init();
+    init_motor_control(0.02);
+    ap3216_init();
+    mode = get_mode();
 
-    I2C left(PB_9, PB_8); // SDA: PB_9, SCL: PB_8
-    left.frequency(100000); // Set I2C bus speed (100kHz)
-
-    I2C right(PB_3, PB_10); // SDA: PB_3, SCL: PB_10
-    right.frequency(100000); // Set I2C bus speed (100kHz)
-
-    ap3216_init(&left);
-    ap3216_init(&right);
-
-    
-    debounce.start();
-    //button.fall([&debounce]() { tgl_on_off(debounce);}); //Lambda funkcija
-    button.fall(&tgl_on_off);
-    button.rise(&debounce_cbf);
-
-    while (true) {
-        /*ret = read_als(&left, &lt_val);
-        if (ret)
-            err = true;
-
-        ret = read_als(&right, &rt_val);
-        if (ret)
-            err = true;
-
-        printf("lt: %hu\n", lt_val);
-        printf("rt: %hu\n", rt_val);
-
-        ThisThread::sleep_for(500);*/
-
+    while (true) {        
         if (active) {
-            printf("gas\n");
+            Timer run_timer;
+            run_timer.start();
+            
+            while (run_timer.read() <= RUN_TIME_S && active) {
+                
+                ret = read_left_sensor(&lt_val);
+                if (ret)
+                    err = true;
+
+                ret = read_right_sensor(&rt_val);
+                if (ret)
+                    err = true;
+
+                ///printf("lt: %hu\n", lt_val);
+                //printf("rt: %hu\n", rt_val);
+
+                regulator_U.LIjevisenzor = (double)lt_val;
+                regulator_U.Desnisenzor = (double)rt_val;
+                regulator_step();
+                
+                if (!mode) {
+                    set_motor_speed(regulator_Y.Lijevimotor, regulator_Y.Desnimotor);
+                } else if (mode) {
+                    set_motor_speed(regulator_Y.Desnimotor, regulator_Y.Lijevimotor);
+
+                }
+                //printf("regulator_Y.desni: %f\n", regulator_Y.Desnimotor);
+                //printf("regulator_Y.lijev: %f\n", regulator_Y.Lijevimotor);
+            }
+
+            run_timer.stop();
+            active = false;
         }
-        ThisThread::sleep_for(5);
+        set_motor_speed(0,0);
+        //ThisThread::sleep_for(5);
     }
 
     return 0;

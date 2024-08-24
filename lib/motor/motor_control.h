@@ -8,6 +8,6 @@ extern PwmOut pwm_D;
 
 void set_motor_speed(double left_speed, double right_speed);
 
-void init_motor_control();
+void init_motor_control(float period);
 
 #endif // MOTOR_CONTROL_H
